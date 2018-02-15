@@ -19,15 +19,9 @@ class MainScreenTableViewCell: UITableViewCell {
     private let dateFormatter = DateFormatter(withFormat: "dd MMMM YYYY, HH:mm", locale: "ru")
     
     func configure(with titleItem:Title) {
-        let date = Date(timeIntervalSince1970: Double(titleItem.publicationDate.milliseconds)/1000)
+        let date = Date(timeIntervalSince1970: titleItem.publicationDate.milliseconds/1000)
         self.dateTimeLabel.text = dateFormatter.string(from: date)
         self.captionLabel.text = titleItem.text
+        self.viewsCountLabel.text = "\(CoreDataManager.shared.titleViewsCount(byId: titleItem.id))"
     }
-    
-    override func prepareForReuse() {
-        super.prepareForReuse()
-        self.captionLabel.text = ""
-        self.dateTimeLabel.text = ""
-    }
-
 }

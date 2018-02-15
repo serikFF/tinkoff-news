@@ -19,18 +19,19 @@ class DetailScreenVC: UIViewController {
     
     @IBOutlet weak var webViewHeightConstraint: NSLayoutConstraint!
     
+    @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     private let dateFormatter = DateFormatter(withFormat: "dd MMMM YYYY, HH:mm", locale: "ru")
     fileprivate var isFirstload:Bool = true
 
     override func viewDidLoad() {
         super.viewDidLoad()
         webView.delegate = self
-
+        self.activityIndicator.startAnimating()
     }
 
     
     func configureWithNewsID(_ id:String) {
-
+        
         //at first load from cache
         
         
@@ -39,7 +40,7 @@ class DetailScreenVC: UIViewController {
                 guard let newsDetail = newsDetail else { return }
                 DispatchQueue.main.async {
                     self.captionLabel.text = newsDetail.title.text
-                    let date = Date(timeIntervalSince1970: Double(newsDetail.title.publicationDate.milliseconds)/1000)
+                    let date = Date(timeIntervalSince1970: newsDetail.title.publicationDate.milliseconds/1000)
                     self.dateTimeLabel.text = self.dateFormatter.string(from: date)
                     self.loadData(withHtmlString: newsDetail.content)
                 }
@@ -59,6 +60,7 @@ class DetailScreenVC: UIViewController {
 
 extension DetailScreenVC: UIWebViewDelegate {
     func webViewDidFinishLoad(_ webView: UIWebView) {
+        self.activityIndicator.stopAnimating()
         self.isFirstload = false
         var frame = webView.frame
         frame.size.height = 1

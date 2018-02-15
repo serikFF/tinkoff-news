@@ -35,8 +35,9 @@ struct Title:Decodable {
     var text:String
     var publicationDate:DateMS
     var bankInfoTypeId:Int
+    var viewsCount:Int?
 }
 
 struct DateMS:Decodable {
-    var milliseconds:UInt
+    var milliseconds:Double
 }

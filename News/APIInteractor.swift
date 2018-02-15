@@ -49,6 +49,7 @@ class APIInteractor {
                 for index in response.payload.indices {
                     response.payload[index].text = response.payload[index].text.stringByDecodingHTMLEntities
                 }
+                CoreDataManager.shared.saveNewsTitles(response.payload)
                 completion(response.payload, nil)
             } catch let parsingError {
                 completion(nil, self.getError(for: .parsingError, underlyingError: parsingError as NSError))
@@ -85,23 +86,24 @@ class APIInteractor {
     }
     
     func getError(for type:ErrorsType, underlyingError:NSError?) -> NSError {
-        var error = NSError()
+        var error:NSError!
         
         switch type {
         case .parsingError:
             error = NSError(domain:self.errorDomain,
                             code: ErrorsType.parsingError.rawValue,
-                            userInfo: [NSLocalizedDescriptionKey:"Ошибка обработки данных",
-                                       NSUnderlyingErrorKey: underlyingError ?? NSError()])
+                            userInfo: [NSLocalizedDescriptionKey:"Ошибка обработки данных.",
+                                       NSUnderlyingErrorKey: underlyingError ??
+                                        NSError.init(domain: "", code: 0, userInfo: nil)])
         case .undefinedError:
             error = NSError(domain:self.errorDomain,
                             code: ErrorsType.undefinedError.rawValue,
-                            userInfo: [NSLocalizedDescriptionKey:"Неизвестная ошибка"])
+                            userInfo: [NSLocalizedDescriptionKey:"Неизвестная ошибка."])
             
         case .noInternetConnection:
             error = NSError(domain:self.errorDomain,
                             code: ErrorsType.noInternetConnection.rawValue,
-                            userInfo: [NSLocalizedDescriptionKey:"Проверьте интернет соединение"])
+                            userInfo: [NSLocalizedDescriptionKey:"Проверьте интернет соединение."])
         }
         
         return error
