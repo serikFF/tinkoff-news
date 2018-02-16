@@ -39,66 +39,89 @@ class CoreDataManager {
         }
         var convertedTitles = [Title]()
         for cdTitle in titles {
-            let convertedTitle = Title(id: cdTitle.id ?? "-1",
-                                       name: cdTitle.name ?? "empty name",
-                                       text: cdTitle.text ?? "empty text",
-                                       publicationDate: DateMS(milliseconds: cdTitle.publicationDate),
-                                       bankInfoTypeId: Int(cdTitle.bankInfoTypeId),
-                                       viewsCount: Int(cdTitle.viewsCount))
+            let convertedTitle = self.convertCDTitle(cdTitle)
             convertedTitles.append(convertedTitle)
         }
         return convertedTitles
     }
     
     func getNewsTitle(byId id:String) -> Title? {
-        let request = CDNewsTitle.fetchRequest() as NSFetchRequest<CDNewsTitle>
-        request.predicate = NSPredicate(format: "id == %@", id)
-        var title:Title?
-        var cdTitle:CDNewsTitle?
-        do {
-            cdTitle = try self.context.fetch(request).first
-        } catch let error as NSError {
-            print("Could not fetch Title by id=\(id). \(error), \(error.userInfo)")
-        }
-        guard let cdTitle1 = cdTitle else {
+        guard let cdTitle = self.findCDNewsTitle(byId: id) else {
             return nil
         }
-        title = Title(id: cdTitle1.id ?? "-1",
-                      name: cdTitle1.name ?? "empty name",
-                      text: cdTitle1.text ?? "empty text",
-                      publicationDate: DateMS(milliseconds: cdTitle1.publicationDate),
-                      bankInfoTypeId: Int(cdTitle1.bankInfoTypeId),
-                      viewsCount: Int(cdTitle1.viewsCount))
-        return title
+        return self.convertCDTitle(cdTitle)
+    }
+    
+    func convertCDTitle(_ cdTitle:CDNewsTitle) -> Title {
+        return Title(id: cdTitle.id ?? "-1",
+                     name: cdTitle.name ?? "empty name",
+                     text: cdTitle.text ?? "empty text",
+                     publicationDate: DateMS(milliseconds: cdTitle.publicationDate),
+                     bankInfoTypeId: Int(cdTitle.bankInfoTypeId),
+                     viewsCount: Int(cdTitle.viewsCount))
     }
     
     func increaseTitleViewsCount(byId id:String) {
-        let request = CDNewsTitle.fetchRequest() as NSFetchRequest<CDNewsTitle>
-        request.predicate = NSPredicate(format: "id == %@", id)
-        var cdTitle:CDNewsTitle?
-        do {
-            cdTitle = try self.context.fetch(request).first
-        } catch let error as NSError {
-            print("Could not fetch Title by id=\(id). \(error), \(error.userInfo)")
-        }
-        if let cdTitle = cdTitle {
+        if let cdTitle = self.findCDNewsTitle(byId: id) {
             cdTitle.viewsCount = cdTitle.viewsCount + 1
             self.appDelegate.saveContext()
+        } else {
+            print("Could not increase views count by id=\(id).")
         }
     }
     
     func titleViewsCount(byId id:String) -> Int {
+        if let cdTitle = self.findCDNewsTitle(byId: id) {
+            return Int(cdTitle.viewsCount)
+        }
+        return 0
+    }
+    
+    func findCDNewsTitle(byId id:String) -> CDNewsTitle? {
+        var cdTitle:CDNewsTitle?
         let request = CDNewsTitle.fetchRequest() as NSFetchRequest<CDNewsTitle>
         request.predicate = NSPredicate(format: "id == %@", id)
-        var cdTitle:CDNewsTitle?
         do {
             cdTitle = try self.context.fetch(request).first
         } catch let error as NSError {
             print("Could not fetch Title by id=\(id). \(error), \(error.userInfo)")
         }
-        if let cdTitle = cdTitle {
-            return Int(cdTitle.viewsCount)
+        return cdTitle
+    }
+    
+    func getNewsDetail(byTitleId id:String) -> NewsDetail? {
+        var cdNewsItem:CDNewsItem?
+        let request = CDNewsItem.fetchRequest() as NSFetchRequest<CDNewsItem>
+        request.predicate = NSPredicate(format: "title.id == %@", id)
+        do {
+            cdNewsItem = try self.context.fetch(request).first
+        } catch let error as NSError {
+            print("Could not fetch Title by id=\(id). \(error), \(error.userInfo)")
         }
-        return 0
+        guard let cdTitle = cdNewsItem?.title, let cdNews = cdNewsItem else {
+            return nil
+        }
+        let title = self.convertCDTitle(cdTitle)
+        return NewsDetail(title: title,
+                          creationDate: DateMS(milliseconds:cdNews.creationDate),
+                          lastModificationDate: DateMS(milliseconds:cdNews.lastModificationDate),
+                          bankInfoTypeId: Int(cdNews.bankInfoTypeId),
+                          typeId: cdNews.typeId ?? "no type",
+                          content: cdNews.content ?? "")
+    }
+    
+    func saveNewsDetail(_ newsDetail:NewsDetail) {
+        if let cdTitle = self.findCDNewsTitle(byId: newsDetail.title.id) {
+            let cdNewsItem = CDNewsItem(entity: CDNewsItem.entity(), insertInto: self.context)
+            cdNewsItem.title = cdTitle
+            cdNewsItem.content = newsDetail.content
+            cdNewsItem.bankInfoTypeId = Int64(newsDetail.bankInfoTypeId)
+            cdNewsItem.creationDate = newsDetail.creationDate.milliseconds
+            cdNewsItem.lastModificationDate = newsDetail.lastModificationDate.milliseconds
+            cdNewsItem.typeId = newsDetail.typeId
+            self.appDelegate.saveContext()
+        } else {
+            print("Could not assotiate NewsItem with Title id=\(newsDetail.title.id).")
+        }
     }
 }

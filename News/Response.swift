@@ -17,10 +17,10 @@ struct ResponseNews:Decodable {
 struct ResponseDetailNews:Decodable {
     var resultCode:String
     var trackingId:String
-    var payload:Payload
+    var payload:NewsDetail
 }
 
-struct Payload:Decodable {
+struct NewsDetail:Decodable {
     var title:Title
     var creationDate:DateMS
     var lastModificationDate:DateMS

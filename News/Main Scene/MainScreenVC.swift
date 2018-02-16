@@ -43,6 +43,7 @@ class MainScreenVC: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         self.loadData()
+        self.setupActivityIndicatorForCell()
     }
     
     func loadData() {
@@ -57,50 +58,56 @@ class MainScreenVC: UIViewController {
         
         APIInteractor.shared.getNews(pagination: self.pagination) { [unowned self] (news, err) in
             if err == nil {
-                self.pagination = self.getNextPagination()
-                guard let news = news else { return }
-                if news.count > 0 {
-                    if self.isRefreshing {
-                        self.titles.removeAll()
-                        self.isRefreshing = false
-                    }
-                    if self.isFirstLoad {
-                        self.isFirstLoad = false
-                        self.titles.removeAll()
-                    }
-                    self.titles.append(contentsOf: news)
-                    DispatchQueue.main.async {
-                        self.dataIsLoaded()
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        self.tableView.tableFooterView?.isHidden = true
-                    }
+                DispatchQueue.main.async {
+                    self.setupWithData(news)
                 }
             } else {
                 DispatchQueue.main.async {
-                    self.activityIndicator.stopAnimating()
-                    self.refreshControl.endRefreshing()
-                    var additionalMessage = ""
-                    if self.titles.count > 0 {
-                        additionalMessage = "\nВы по-прежнему можете просматривать сохраненные новости"
-                    }
-                  
-                    let errorMessage = "\(err?.localizedDescription ?? "") \(additionalMessage)"
-                    let alert = UIAlertController(title: "Возникла ошибка", message: errorMessage, preferredStyle: .alert)
-                    alert.addAction(UIAlertAction(title: "Закрыть", style: .cancel, handler: { _ in
-                        alert.dismiss(animated: true, completion: {
-                            
-                        })
-                    }))
-                    alert.addAction(UIAlertAction(title: "Попробовать снова", style: .`default`, handler: { (action) in
-                        self.loadData()
-                    }))
-                    self.present(alert, animated: true, completion: nil)
+                    self.showAlertWithError(err)
                 }                
                 print(err ?? "Error")
             }
         }
+    }
+    
+    func setupWithData(_ news:[Title]?) {
+        self.pagination = self.getNextPagination()
+        guard let news = news else { return }
+        if news.count > 0 {
+            if self.isRefreshing {
+                self.titles.removeAll()
+                self.isRefreshing = false
+            }
+            if self.isFirstLoad {
+                self.isFirstLoad = false
+                self.titles.removeAll()
+            }
+            self.titles.append(contentsOf: news)
+            self.dataIsLoaded()
+        } else {
+            self.tableView.tableFooterView?.isHidden = true
+        }
+    }
+    
+    func showAlertWithError(_ err:NSError?) {
+        self.activityIndicator.stopAnimating()
+        self.refreshControl.endRefreshing()
+        var additionalMessage = ""
+        if self.titles.count > 0 {
+            additionalMessage = "\nВы по-прежнему можете просматривать сохраненные новости"
+        }
+        
+        let errorMessage = "\(err?.localizedDescription ?? "") \(additionalMessage)"
+        let alert = UIAlertController(title: "Возникла ошибка", message: errorMessage, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Закрыть", style: .cancel, handler: { _ in
+            alert.dismiss(animated: true, completion: {
+                
+            })
+        }))
+        alert.addAction(UIAlertAction(title: "Попробовать снова", style: .`default`, handler: { (action) in
+            self.loadData()
+        }))
+        self.present(alert, animated: true, completion: nil)
     }
     
     @objc func handleRefresh(_ refreshControl: UIRefreshControl) {
@@ -151,7 +158,7 @@ extension MainScreenVC: UITableViewDelegate {
         let destinationController = UIStoryboard(name: DetailScreenVC.sbName, bundle: Bundle.main)
             .instantiateViewController(withIdentifier: DetailScreenVC.sbID) as! DetailScreenVC
         
-        destinationController.configureWithNewsID(self.titles[indexPath.row].id)
+        destinationController.newsId = self.titles[indexPath.row].id
         self.navigationController?.pushViewController(destinationController, animated: true)
         CoreDataManager.shared.increaseTitleViewsCount(byId: self.titles[indexPath.row].id)
         self.tableView.reloadRows(at: [indexPath], with: .automatic)

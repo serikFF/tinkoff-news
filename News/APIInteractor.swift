@@ -11,7 +11,7 @@ import UIKit
 class APIInteractor {
     
     typealias newsCompletionBlock = ((_ result:[Title]?, _ error:NSError?) -> Void)
-    typealias newsDetailCompletionBlock = ((_ result:Payload?, _ error:NSError?) -> Void)
+    typealias newsDetailCompletionBlock = ((_ result:NewsDetail?, _ error:NSError?) -> Void)
 
     struct Pagination {
         var first = 0
@@ -59,7 +59,7 @@ class APIInteractor {
     }
     
     
-    func getDetailNews(byID id:String, completion:@escaping newsDetailCompletionBlock) {
+    func getNewsDetail(byID id:String, completion:@escaping newsDetailCompletionBlock) {
         let url = URL(string: "\(baseURLString)news_content?id=\(id)")
         let task = URLSession.shared.dataTask(with: url!) { [unowned self] (data, response, error) in
             if error != nil, let err = error as NSError? {
@@ -77,6 +77,7 @@ class APIInteractor {
             do {
                 var response = try JSONDecoder().decode(ResponseDetailNews.self, from: data)
                 response.payload.title.text = response.payload.title.text.stringByDecodingHTMLEntities
+                CoreDataManager.shared.saveNewsDetail(response.payload)
                 completion(response.payload, nil)
             } catch let parsingError {
                 completion(nil, self.getError(for: .parsingError, underlyingError: parsingError as NSError))
@@ -103,7 +104,7 @@ class APIInteractor {
         case .noInternetConnection:
             error = NSError(domain:self.errorDomain,
                             code: ErrorsType.noInternetConnection.rawValue,
-                            userInfo: [NSLocalizedDescriptionKey:"Проверьте интернет соединение."])
+                            userInfo: [NSLocalizedDescriptionKey:"Отсутствует интернет-соединение."])
         }
         
         return error
